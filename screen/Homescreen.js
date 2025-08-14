@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View, Image,TouchableOpacity } from 'react-native'
 import React from 'react'
+import { SafeAreaView } from 'react-native'
 import { colors } from './utils/colors'
 import { useNavigation } from '@react-navigation/native'
 
@@ -13,8 +14,9 @@ const Homescreen = () => {
     navigation.navigate('Signup');
   };
 
-  return (
-    <View style={styles.container}>
+  return ( 
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+      <View style={styles.container}>
       <Image source={require('./assets/logo.png')} style={styles.logo} />
       <Text style={styles.title}>JOBEASE</Text>
       <TouchableOpacity style={styles.button} onPress={handleLOGIN}>
@@ -23,7 +25,8 @@ const Homescreen = () => {
       <TouchableOpacity style={styles.button} onPress={handleSIGNUP}>
         <Text>SIGNUP</Text>
       </TouchableOpacity>
-    </View>
+      </View>
+    </SafeAreaView>
   );
 }
 

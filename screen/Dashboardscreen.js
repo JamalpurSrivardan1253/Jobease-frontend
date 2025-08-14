@@ -139,11 +139,15 @@ const Dashboardscreen = () => {
 			</View>
 
 			<View style={styles.statsRow}>
-				<View style={styles.statCardLeft}>
-					<Text style={styles.statNumber}>{appliedCount}</Text>
-					<Text style={styles.statLabel}>Jobs Applied</Text>
-					<Image source={require('./assets/logo.png')} style={styles.statIcon} />
-				</View>
+			   <TouchableOpacity
+				   style={styles.statCardLeft}
+				   activeOpacity={0.7}
+				   onPress={() => navigation.navigate('AppliedScreen')}
+			   >
+				   <Text style={styles.statNumber}>{appliedCount}</Text>
+				   <Text style={styles.statLabel}>Jobs Applied</Text>
+				   <Image source={require('./assets/logo.png')} style={styles.statIcon} />
+			   </TouchableOpacity>
 				<View style={styles.statCardRight}>
 					<Text style={styles.statNumber}>{interviewCount}</Text>
 					<Text style={styles.statLabel}>Interviews</Text>

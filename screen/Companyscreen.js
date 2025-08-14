@@ -27,14 +27,23 @@ const Companyscreen = () => {
   const [location, setLocation] = useState(companyData?.location || '');
   const [website, setWebsite] = useState(companyData?.website || '');
   const [logo, setLogo] = useState(companyData?.logo || null);
+  const [logoAsset, setLogoAsset] = useState(null); // Store asset for upload
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
   const requestCameraPermission = async () => {
     if (Platform.OS === 'android') {
       try {
+        let permission;
+        if (Platform.Version >= 33 && PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES) {
+          // Android 13+ (API 33+)
+          permission = PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES;
+        } else {
+          // Android 12 and below
+          permission = PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE;
+        }
         const granted = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
+          permission,
           {
             title: "Storage Permission",
             message: "App needs access to your storage to select images.",
@@ -84,13 +93,8 @@ const Companyscreen = () => {
       }
 
       const asset = result.assets[0];
-      if (!asset.base64) {
-        throw new Error('No base64 data received from image');
-      }
-
-      const base64Image = `data:${asset.type};base64,${asset.base64}`;
-      console.log('Setting logo with base64 image data');
-      setLogo(base64Image);
+      setLogo(asset.uri); // For preview
+      setLogoAsset(asset); // For upload
     } catch (error) {
       console.error('ImagePicker Error:', error);
       Alert.alert(
@@ -136,27 +140,32 @@ const Companyscreen = () => {
         ? `${BACKEND_URL}/api/companies/${companyData._id}` 
         : `${BACKEND_URL}/api/companies`;
 
-      console.log('Making request to:', url, { companyData });
+      const formData = new FormData();
+      formData.append('name', name.trim());
+      formData.append('description', description.trim());
+      formData.append('location', location.trim());
+      formData.append('website', website.trim());
+      if (logoAsset) {
+        formData.append('logo', {
+          uri: logoAsset.uri,
+          type: logoAsset.type || 'image/jpeg',
+          name: logoAsset.fileName || 'logo.jpg',
+        });
+      }
+
       const response = await fetch(url, {
         method,
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          'Content-Type': 'multipart/form-data',
         },
-        body: JSON.stringify({
-          name: name.trim(),
-          description: description.trim(),
-          location: location.trim(),
-          website: website.trim(),
-          logo, // Include logo in the request
-        }),
+        body: formData,
       });
 
       let data;
       try {
         const textResponse = await response.text();
         console.log('Server response:', textResponse);
-        
         try {
           data = JSON.parse(textResponse);
         } catch (parseError) {
@@ -167,11 +176,9 @@ const Companyscreen = () => {
         console.error('Error reading response:', error);
         throw new Error('Failed to read server response');
       }
-      
       if (!response.ok) {
         throw new Error(data.message || 'Failed to save company');
       }
-
       Alert.alert(
         'Success', 
         `Company ${isEdit ? 'updated' : 'created'} successfully`,

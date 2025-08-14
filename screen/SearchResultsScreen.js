@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect ,useRef} from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,10 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  FlatList
+  FlatList,
+  Dimensions,
+  Animated,
+  Image,
 } from 'react-native';
 import { colors } from './utils/colors';
 import { useNavigation } from '@react-navigation/native';
@@ -15,44 +18,48 @@ import axios from 'axios';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BACKEND_URL } from '../utils/config';
+import { Modal } from 'react-native';
+
+
+const { width } = Dimensions.get('window');
 
 const SearchResultsScreen = ({ route }) => {
   const navigation = useNavigation();
   const [searchQuery, setSearchQuery] = useState(route.params?.initialQuery || '');
   const [jobs, setJobs] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const filterAnimation = useRef(new Animated.Value(0)).current;
+
+
+  // Filter state
+  const [filterLocation, setFilterLocation] = useState('');
+  const [filterMinSalary, setFilterMinSalary] = useState('');
+  const [filterMaxSalary, setFilterMaxSalary] = useState('');
+  const [filterCategory, setFilterCategory] = useState('');
 
   const searchJobs = async (query) => {
     try {
       setIsLoading(true);
-      console.log('Searching for:', query); // Debug log
-      
-      // Get auth token
       const token = await AsyncStorage.getItem('token');
-      if (!token) {
-        console.error('No auth token found');
-        return;
-      }
+      if (!token) return;
 
       let url;
       if (!query.trim()) {
         url = `${BACKEND_URL}/api/jobs/`;
       } else {
-        // Try to detect if query is a number (salary search)
-        if (!isNaN(query) && query.trim() !== '') {
+        if (!isNaN(query)) {
           url = `${BACKEND_URL}/api/jobs/search?salary=${encodeURIComponent(query)}`;
         } else if (/\d/.test(query) === false && query.length > 2 && query[0] === query[0].toUpperCase()) {
-          // crude check: if first letter is uppercase and not a number, treat as location (improve as needed)
           url = `${BACKEND_URL}/api/jobs/search?location=${encodeURIComponent(query)}`;
         } else {
-          // default: search by title
           url = `${BACKEND_URL}/api/jobs/search?title=${encodeURIComponent(query)}`;
         }
       }
+
       const response = await axios.get(url, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
-      console.log('Search response:', response.data); // Debug log
       setJobs(response.data);
     } catch (error) {
       console.error('Error searching jobs:', error.response?.data || error.message);
@@ -61,233 +68,336 @@ const SearchResultsScreen = ({ route }) => {
     }
   };
 
-  // Initial load - fetch all jobs
+  const applyFilters = async () => {
+    try {
+      setIsLoading(true);
+      const token = await AsyncStorage.getItem('token');
+      if (!token) return;
+
+      const params = new URLSearchParams();
+      if (filterLocation) params.append('location', filterLocation);
+      if (filterMinSalary) params.append('minSalary', filterMinSalary);
+      if (filterMaxSalary) params.append('maxSalary', filterMaxSalary);
+      if (filterCategory) params.append('category', filterCategory);
+
+      const url = `${BACKEND_URL}/api/jobs/filter?${params.toString()}`;
+
+      const response = await axios.get(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setJobs(response.data);
+    } catch (error) {
+      console.error('Filter error:', error.response?.data || error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const clearFilters = () => {
+    setFilterLocation('');
+    setFilterCategory('');
+    setFilterMinSalary('');
+    setFilterMaxSalary('');
+    searchJobs('');
+  };
+
+ const toggleFilters = () => {
+  setShowFilters(!showFilters);
+};
+
+
   useEffect(() => {
     searchJobs('');
   }, []);
 
-  // Handle search query changes with debounce
   useEffect(() => {
-    // Don't search if query is just spaces
     if (searchQuery.trim() === searchQuery.trim()) {
       const timeoutId = setTimeout(() => {
-        console.log('Debounced search for:', searchQuery); // Debug log
         searchJobs(searchQuery);
-      }, 500); // 500ms debounce
-
+      }, 500);
       return () => clearTimeout(timeoutId);
     }
   }, [searchQuery]);
 
-  const renderJobCard = ({ item: job }) => (
+  const renderJobCard = ({ item: job, index }) => (
     <TouchableOpacity
+      key={job._id || index}
       style={styles.jobCard}
-      onPress={() => {
-        console.log('Navigating to job:', job._id); // Debug log
-        navigation.navigate('Jobscreen', { jobId: job._id });
-      }}
+      onPress={() => navigation.navigate('Jobscreen', { jobId: job._id })}
+      activeOpacity={0.7}
     >
-      <View style={styles.jobHeader}>
-        <Text style={styles.jobTitle}>{job.title}</Text>
-        <Text style={styles.salary}>₹{job.salary?.toLocaleString() || job.salary}</Text>
-      </View>
-      <Text style={styles.companyName}>{job.company?.name || (typeof job.company === 'string' ? job.company : '')}</Text>
-      <View style={styles.jobFooter}>
-        <View style={styles.locationContainer}>
-          <Ionicons name="location-outline" size={16} color="#666" />
-          <Text style={styles.location}>{job.location}</Text>
-        </View>
-        <View style={styles.categoryContainer}>
-          <Ionicons name="briefcase-outline" size={16} color="#666" />
-          <Text style={styles.category}>{job.category}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <Image
+          source={job.company?.logo ? { uri: job.company.logo } : require('./assets/logo.png')}
+          style={styles.companyLogo}
+        />
+        <View style={{ flex: 1, marginLeft: 12 }}>
+          <Text style={styles.jobTitle}>{job.title}</Text>
+          <Text style={styles.jobCompany}>{job.company?.name}</Text>
+          <Text style={styles.jobLocation}>{job.location}</Text>
         </View>
       </View>
     </TouchableOpacity>
   );
 
+  const renderEmptyState = () => (
+    <View style={styles.emptyState}>
+      <Ionicons name="search-outline" size={64} color="#cbd5e1" />
+      <Text style={styles.emptyTitle}>{isLoading ? 'Searching...' : 'No jobs found'}</Text>
+      <Text style={styles.emptySubtitle}>Try adjusting your filters or search terms</Text>
+      {!isLoading && (
+        <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearSearchButton}>
+          <Text style={styles.clearSearchText}>Clear Search</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton} 
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="arrow-back" size={24} color="#333" />
-        </TouchableOpacity>
-        <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color="#888" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search jobs by title or location..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            autoFocus={true}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity 
-              onPress={() => setSearchQuery('')}
-              style={styles.clearButton}
-            >
-              <Ionicons name="close-circle" size={20} color="#888" />
-            </TouchableOpacity>
-          )}
+      {/* Header with Search */}
+      <View style={styles.headerContainer}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <Ionicons name="chevron-back" size={24} color="#1e293b" />
+          </TouchableOpacity>
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={20} color="#64748b" style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search jobs..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Ionicons name="close-circle" size={20} color="#64748b" />
+              </TouchableOpacity>
+            )}
+          </View>
+          <TouchableOpacity onPress={toggleFilters}>
+            <Ionicons name="options-outline" size={24} color={colors.blue} />
+          </TouchableOpacity>
         </View>
+
+        {/* Filter UI */}
+        {/* <Animated.View
+          style={[
+            styles.filterContainer,
+            {
+              height: filterAnimation.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, 220],
+              }),
+              opacity: filterAnimation,
+            },
+          ]}
+        >
+          <ScrollView contentContainerStyle={styles.filterInputGroup}>
+            <TextInput
+              style={styles.filterInput}
+              placeholder="Location"
+              value={filterLocation}
+              onChangeText={setFilterLocation}
+            />
+            <TextInput
+              style={styles.filterInput}
+              placeholder="Category"
+              value={filterCategory}
+              onChangeText={setFilterCategory}
+            />
+            <TextInput
+              style={styles.filterInput}
+              placeholder="Min Salary"
+              value={filterMinSalary}
+              onChangeText={setFilterMinSalary}
+              keyboardType="numeric"
+            />
+            <TextInput
+              style={styles.filterInput}
+              placeholder="Max Salary"
+              value={filterMaxSalary}
+              onChangeText={setFilterMaxSalary}
+              keyboardType="numeric"
+            />
+            <TouchableOpacity style={styles.applyButton} onPress={applyFilters}>
+              <Text style={styles.applyButtonText}>Apply Filters</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.clearButton} onPress={clearFilters}>
+              <Text style={styles.clearText}>Clear Filters</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </Animated.View> */}
+        <Modal
+  animationType="slide"
+  transparent={true}
+  visible={showFilters}
+  onRequestClose={() => setShowFilters(false)}
+>
+  <View style={styles.modalOverlay}>
+    <View style={styles.modalContent}>
+      <Text style={styles.modalTitle}>Filter Jobs</Text>
+      <ScrollView contentContainerStyle={styles.filterInputGroup}>
+        <TextInput
+          style={styles.filterInput}
+          placeholder="Location"
+          value={filterLocation}
+          onChangeText={setFilterLocation}
+        />
+        <TextInput
+          style={styles.filterInput}
+          placeholder="Category"
+          value={filterCategory}
+          onChangeText={setFilterCategory}
+        />
+        <TextInput
+          style={styles.filterInput}
+          placeholder="Min Salary"
+          value={filterMinSalary}
+          onChangeText={setFilterMinSalary}
+          keyboardType="numeric"
+        />
+        <TextInput
+          style={styles.filterInput}
+          placeholder="Max Salary"
+          value={filterMaxSalary}
+          onChangeText={setFilterMaxSalary}
+          keyboardType="numeric"
+        />
+        <TouchableOpacity style={styles.applyButton} onPress={() => { applyFilters(); setShowFilters(false); }}>
+          <Text style={styles.applyButtonText}>Apply Filters</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.clearButton} onPress={() => { clearFilters(); setShowFilters(false); }}>
+          <Text style={styles.clearText}>Clear Filters</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => setShowFilters(false)} style={styles.closeModalButton}>
+          <Text style={styles.closeModalText}>Close</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
+  </View>
+</Modal>
+
       </View>
 
-      <View style={styles.content}>
-        {isLoading ? (
-          <ActivityIndicator style={styles.loader} size="large" color={colors.blue} />
-        ) : (
-          <>
-            <Text style={styles.resultsCount}>
-              {jobs.length} {jobs.length === 1 ? 'Job' : 'Jobs'} Found
-            </Text>
-            <FlatList
-              data={jobs}
-              renderItem={renderJobCard}
-              keyExtractor={(item) => item._id || item.id}
-              contentContainerStyle={styles.jobsList}
-              ListEmptyComponent={() => (
-                <View style={styles.noResults}>
-                  <Text style={styles.noResultsText}>
-                    {isLoading ? 'Searching...' : 'No jobs found'}
-                  </Text>
-                  {!isLoading && (
-                    <Text style={styles.noResultsSubText}>
-                      {searchQuery.trim() 
-                        ? 'Try different keywords or location'
-                        : 'All jobs will appear here'}
-                    </Text>
-                  )}
-                </View>
-              )}
-            />
-          </>
-        )}
-      </View>
+      {/* Job Results */}
+      <FlatList
+        data={jobs}
+        renderItem={renderJobCard}
+        keyExtractor={(item) => item._id}
+        contentContainerStyle={{ paddingVertical: 12 }}
+        ListEmptyComponent={renderEmptyState}
+        ListFooterComponent={isLoading && <ActivityIndicator size="large" color={colors.blue} />}
+      />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F8F9FB',
-  },
+  container: { flex: 1, backgroundColor: '#F8F9FB' },
+  headerContainer: { backgroundColor: '#fff', elevation: 4 },
   header: {
-    backgroundColor: '#fff',
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
+    paddingHorizontal: 16,
     paddingTop: 48,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    paddingBottom: 16,
   },
   backButton: {
-    padding: 8,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#f1f5f9',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   searchContainer: {
     flex: 1,
     flexDirection: 'row',
+    backgroundColor: '#f1f5f9',
+    borderRadius: 16,
+    marginHorizontal: 12,
+    paddingHorizontal: 16,
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-    borderRadius: 12,
-    marginLeft: 12,
-    paddingHorizontal: 12,
   },
-  searchIcon: {
-    marginRight: 8,
+  searchInput: { flex: 1, fontSize: 16, fontWeight: '500', color: '#1e293b' },
+  searchIcon: { marginRight: 12 },
+  filterContainer: { overflow: 'hidden', paddingHorizontal: 16 },
+  filterInputGroup: { paddingVertical: 10 },
+  filterInput: {
+    backgroundColor: '#f1f5f9',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 8,
   },
-  searchInput: {
-    flex: 1,
-    paddingVertical: 8,
-    fontSize: 16,
-    color: '#333',
+  applyButton: {
+    backgroundColor: colors.blue,
+    padding: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 10,
   },
-  clearButton: {
-    padding: 4,
-  },
-  content: {
-    flex: 1,
-  },
-  loader: {
-    marginTop: 20,
-  },
-  resultsCount: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#666',
-    padding: 16,
-  },
-  jobsList: {
-    padding: 16,
-  },
+  applyButtonText: { color: '#fff', fontWeight: 'bold' },
+  clearButton: { alignItems: 'center', marginTop: 10 },
+  clearText: { color: colors.blue, fontWeight: '600' },
   jobCard: {
     backgroundColor: '#fff',
     borderRadius: 12,
+    marginHorizontal: 24,
+    marginBottom: 14,
     padding: 16,
-    marginBottom: 12,
     elevation: 2,
   },
-  jobHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
+  jobTitle: { fontSize: 16, fontWeight: 'bold', color: '#222' },
+  jobCompany: { color: '#444', fontSize: 14, marginTop: 2 },
+  jobLocation: { color: '#888', fontSize: 13, marginTop: 1 },
+  companyLogo: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#f1f5f9',
   },
-  jobTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    flex: 1,
-    marginRight: 8,
+  emptyState: { justifyContent: 'center', alignItems: 'center', padding: 40 },
+  emptyTitle: { fontSize: 20, fontWeight: 'bold', marginTop: 16, color: '#1e293b' },
+  emptySubtitle: { color: '#64748b', textAlign: 'center', marginTop: 4 },
+  clearSearchButton: {
+    backgroundColor: colors.blue,
+    marginTop: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 8,
   },
-  salary: {
-    fontSize: 16,
-    color: colors.blue,
-    fontWeight: '600',
-  },
-  companyName: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 8,
-  },
-  jobFooter: {
-    flexDirection: 'row',
-    marginTop: 8,
-  },
-  locationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  location: {
-    marginLeft: 4,
-    color: '#666',
-  },
-  categoryContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  category: {
-    marginLeft: 4,
-    color: '#666',
-  },
-  noResults: {
-    alignItems: 'center',
-    padding: 20,
-    marginTop: 20,
-  },
-  noResultsText: {
-    fontSize: 18,
-    color: '#666',
-    fontWeight: 'bold',
-  },
-  noResultsSubText: {
-    fontSize: 14,
-    color: '#888',
-    marginTop: 8,
-  },
+  clearSearchText: { color: '#fff', fontWeight: '600' },
+  modalOverlay: {
+  flex: 1,
+  backgroundColor: 'rgba(0,0,0,0.4)',
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+modalContent: {
+  width: '90%',
+  backgroundColor: '#fff',
+  borderRadius: 16,
+  padding: 20,
+  maxHeight: '80%',
+},
+modalTitle: {
+  fontSize: 18,
+  fontWeight: 'bold',
+  marginBottom: 12,
+  color: '#1e293b',
+  textAlign: 'center',
+},
+closeModalButton: {
+  marginTop: 10,
+  alignItems: 'center',
+},
+closeModalText: {
+  color: colors.blue,
+  fontWeight: '600',
+  fontSize: 16,
+}
+
 });
 
 export default SearchResultsScreen;

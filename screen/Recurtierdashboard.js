@@ -26,6 +26,7 @@ const Recurtierdashboard = ({ navigation }) => {
     const fetchJobs = async () => {
       try {
         const token = await AsyncStorage.getItem('token');
+        console.log('Token:', token);
         if (!token) {
           setJobs([]);
           setApplicationCount(null);
@@ -33,26 +34,21 @@ const Recurtierdashboard = ({ navigation }) => {
         }
         // Get recruiter id and company id
         const userRes = await axios.get(`${BACKEND_URL}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
-        const recruiterId = userRes.data._id || userRes.data.id;
         const companyId = userRes.data.companyId || userRes.data.company?._id || userRes.data.company;
-        const jobsRes = await axios.get(`${BACKEND_URL}/api/jobs/`);
-        setJobs(
-          jobsRes.data.filter(job => {
-            if (!job.recruiter) return false;
-            if (typeof job.recruiter === 'object') {
-              return job.recruiter._id === recruiterId || job.recruiter.id === recruiterId;
-            }
-            return job.recruiter === recruiterId;
-          })
-        );
+        // Use /api/jobs/my to get jobs posted by this recruiter
+        console.log('Calling /api/jobs/my');
+        const jobsRes = await axios.get(`${BACKEND_URL}/api/jobs/my`, { headers: { Authorization: `Bearer ${token}` } });
+        console.log('Jobs response:', jobsRes.data);
+        setJobs(jobsRes.data);
         // Fetch application count for the company
         if (companyId) {
-          const countRes = await axios.get(`${BACKEND_URL}/api/applications/company/${companyId}/count`, { headers: { Authorization: `Bearer ${token}` } });
-          setApplicationCount(countRes.data.count ?? 0);
+          const countRes = await axios.get(`${BACKEND_URL}/api/applications/company/${companyId}/applications/count`, { headers: { Authorization: `Bearer ${token}` } });
+          setApplicationCount(countRes.data.applicationsCount ?? 0);
         } else {
           setApplicationCount(0);
         }
       } catch (error) {
+        console.log('Error fetching jobs:', error.response?.data || error.message);
         setJobs([]);
         setApplicationCount(null);
       }
@@ -97,8 +93,9 @@ const Recurtierdashboard = ({ navigation }) => {
       </View>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 24 }}>
         <Text style={styles.sectionTitle}>Hiring Process</Text>
-        {jobs.map((job) => (
-          <View key={job._id || job.id} style={styles.jobCard}>
+        {/* {jobs.map((job) => (
+          <TouchableOpacity key={job._id || job.id} 
+          style={styles.jobCard}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2, justifyContent: 'space-between' }}>
               <Text style={styles.jobTitle}>{job.title}</Text>
               <View style={
@@ -115,8 +112,32 @@ const Recurtierdashboard = ({ navigation }) => {
             </View>
             <Text style={styles.jobCompany}>{job.company?.name || job.company || ''}</Text>
             <Text style={styles.jobLocation}>{job.location}</Text>
-          </View>
-        ))}
+           </TouchableOpacity>
+        ))} */}
+        {jobs.map((job) => (
+  <TouchableOpacity
+    key={job._id || job.id}
+    style={styles.jobCard}
+    onPress={() => navigation.navigate('Recruiterjobscreen', { jobId: job._id || job.id })}
+  >
+    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2, justifyContent: 'space-between' }}>
+      <Text style={styles.jobTitle}>{job.title}</Text>
+      <View style={
+        job.status === 'approved' ? styles.approvedBadge :
+        job.status === 'Active' ? styles.activeBadge :
+        styles.inactiveBadge
+      }>
+        <Text style={
+          job.status === 'approved' ? styles.approvedBadgeText :
+          job.status === 'Active' ? styles.activeBadgeText :
+          styles.inactiveBadgeText
+        }>{job.status === 'approved' ? 'Active' : (job.status || 'Pending')}</Text>
+      </View>
+    </View>
+    <Text style={styles.jobCompany}>{job.company?.name || job.company || ''}</Text>
+    <Text style={styles.jobLocation}>{job.location}</Text>
+  </TouchableOpacity>
+))}
       </ScrollView>
     </View>
   );
@@ -270,29 +291,3 @@ const styles = StyleSheet.create({
 });
 
 export default Recurtierdashboard;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

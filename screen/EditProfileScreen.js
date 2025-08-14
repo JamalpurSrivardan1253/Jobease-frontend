@@ -9,13 +9,13 @@ import {
   Alert,
   Modal,
   Image,
+  FlatList,
 } from 'react-native';
 import { colors } from './utils/colors';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { BACKEND_URL } from '../utils/config';
-import { Dropdown } from 'react-native-element-dropdown';
 import { launchImageLibrary } from 'react-native-image-picker';
 
 const EditProfileScreen = ({ route, navigation }) => {
@@ -79,6 +79,8 @@ const EditProfileScreen = ({ route, navigation }) => {
   const [profileImage, setProfileImage] = useState(userData?.profileImage || null);
 
   const [loading, setLoading] = useState(false);
+  const [showSkillsModal, setShowSkillsModal] = useState(false);
+  const [skillsSearchText, setSkillsSearchText] = useState('');
 
   // Skills data (categorized, flat for dropdown)
   const skillsOptions = [
@@ -394,7 +396,7 @@ const EditProfileScreen = ({ route, navigation }) => {
       const updatedData = {
         ...basicInfo,
         profileImage,
-        skills: Array.isArray(skills) ? skills : [],
+        skills, // already an array of values
         education,
         experience,
         certifications,
@@ -426,6 +428,23 @@ const EditProfileScreen = ({ route, navigation }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const addSkill = (skillValue) => {
+    if (!skills.includes(skillValue)) {
+      setSkills([...skills, skillValue]);
+    }
+  };
+
+  const removeSkill = (skillValue) => {
+    setSkills(skills.filter(skill => skill !== skillValue));
+  };
+
+  const getFilteredSkills = () => {
+    return skillsOptions.filter(skill => 
+      skill.label.toLowerCase().includes(skillsSearchText.toLowerCase()) &&
+      !skills.includes(skill.value)
+    );
   };
 
   return (
@@ -664,32 +683,58 @@ const EditProfileScreen = ({ route, navigation }) => {
         {/* Skills Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Skills</Text>
-          <Text style={styles.inputLabel}>Skills (search and select multiple)</Text>
-          <Dropdown
-            style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, minHeight: 50 }}
-            data={skillsOptions}
-            labelField="label"
-            valueField="value"
-            placeholder="Select skills"
-            search
-            searchPlaceholder="Search skills..."
-            value={skills}
-            onChange={items => {
-              // Always expect an array of objects for multi-select
-              if (Array.isArray(items)) {
-                setSkills(items.map(i => i.value));
-              } else if (items && items.value) {
-                setSkills([items.value]);
-              } else {
-                setSkills([]);
-              }
-            }}
-            multiple
-            selectedTextStyle={{ color: colors.blue }}
-            itemContainerStyle={{ borderBottomWidth: 0 }}
-            containerStyle={{ maxHeight: 300 }}
-          />
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 10 }}>
+            {skills.map(skillValue => {
+              const skillObj = skillsOptions.find(opt => opt.value === skillValue);
+              return (
+                <View key={skillValue} style={styles.skillTag}>
+                  <Text style={styles.skillTagText}>{skillObj ? skillObj.label : skillValue}</Text>
+                  <TouchableOpacity onPress={() => removeSkill(skillValue)}>
+                    <Ionicons name="close-circle" size={18} color="#dc2626" style={{ marginLeft: 4 }} />
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+            <TouchableOpacity style={styles.addSkillButton} onPress={() => setShowSkillsModal(true)}>
+              <Ionicons name="add" size={20} color={colors.blue} />
+              <Text style={{ color: colors.blue, marginLeft: 4, fontWeight: 'bold' }}>Add Skill</Text>
+            </TouchableOpacity>
+          </View>
         </View>
+        <Modal
+          visible={showSkillsModal}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setShowSkillsModal(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={[styles.modalContent, { maxHeight: '80%' }]}> 
+              <Text style={styles.modalTitle}>Select Skills</Text>
+              <TextInput
+                style={[styles.input, { marginBottom: 10 }]}
+                placeholder="Search skills..."
+                value={skillsSearchText}
+                onChangeText={setSkillsSearchText}
+              />
+              <FlatList
+                data={getFilteredSkills().slice(0, 10)}
+                keyExtractor={item => item.value}
+                renderItem={({ item }) => (
+                  <TouchableOpacity style={styles.skillOption} onPress={() => addSkill(item.value)}>
+                    {/* Only show label, not category */}
+                    <Text style={styles.skillOptionLabel}>{item.label}</Text>
+                  </TouchableOpacity>
+                )}
+                ListEmptyComponent={<Text style={{ color: '#888', textAlign: 'center', marginTop: 20 }}>No skills found</Text>}
+                keyboardShouldPersistTaps="handled"
+              />
+              <TouchableOpacity style={[styles.modalButton, styles.confirmButton, { marginTop: 16 }]} onPress={() => setShowSkillsModal(false)}>
+                <Text style={styles.confirmButtonText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+        <View style={{ height: 40 }} />
       </ScrollView>
 
       {/* Education Modal */}
@@ -1160,6 +1205,48 @@ const styles = StyleSheet.create({
   disabledInput: {
     backgroundColor: '#f8f9fa',
     color: '#999',
+  },
+  skillTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e0e7ef',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  skillTagText: {
+    color: '#222',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  addSkillButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginBottom: 8,
+  },
+  skillOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  skillOptionCategory: {
+    color: colors.blue,
+    fontWeight: 'bold',
+    marginRight: 10,
+    fontSize: 13,
+    minWidth: 90,
+  },
+  skillOptionLabel: {
+    color: '#222',
+    fontSize: 15,
   },
 });
 

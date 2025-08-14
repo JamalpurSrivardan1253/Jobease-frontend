@@ -52,7 +52,10 @@ const SavedJobsScreen = () => {
       >
         <View style={styles.jobRow}>
           <Image
-            source={item.company?.logoUrl ? { uri: item.company.logoUrl } : require('./assets/logo.png')}
+            source={item.company?.logo
+              ? { uri: item.company.logo }
+              : require('./assets/logo.png')
+            }
             style={styles.logo}
           />
           <View style={{ flex: 1 }}>

@@ -5,7 +5,6 @@ import axios from 'axios'
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-
 // Set your backend IP
 import { BACKEND_URL } from '../utils/config';
 
@@ -19,11 +18,14 @@ const Registerscreen = () => {
     const [agreeTerms, setAgreeTerms] = useState(false)
     const [userType, setUserType] = useState('Seeker') // Seeker or Recruiter
 
-
 const validateAndRegister = async () => {
     if (!firstName || !lastName || !email || !password || !confirmPassword) {
         Alert.alert('Missing Fields', 'Please fill all required fields.')
         return
+    }
+    if (password.length < 8) {
+        Alert.alert('Weak Password', 'Password must be at least 8 characters long.');
+        return;
     }
 
     if (password !== confirmPassword) {
@@ -67,7 +69,6 @@ const validateAndRegister = async () => {
         }
     }
 }
-
 
     return (
         <View style={styles.container}>
@@ -131,8 +132,16 @@ const validateAndRegister = async () => {
                 </View>
 
                 <TouchableOpacity style={styles.registerButton} onPress={validateAndRegister}>
-                    <Text style={styles.registerButtonText}>                                     Register</Text>
+                    <Text style={styles.registerButtonText}>Register</Text>
                 </TouchableOpacity>
+
+                {/* Already have account? Sign in link */}
+                <View style={styles.signinContainer}>
+                    <Text style={styles.signinText}>Already have an account? </Text>
+                    <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+                        <Text style={styles.signinLink}>Sign In</Text>
+                    </TouchableOpacity>
+                </View>
             </View>
         </View>
     )
@@ -225,7 +234,25 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         paddingVertical: 12,
         marginTop: 16,
+    },
+    registerButtonText: {
+        color: '#fff',
+        textAlign: 'center',
+        fontWeight: 'bold',
+    },
+    signinContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 20,
+    },
+    signinText: {
+        fontSize: 16,
+        color: '#666',
+    },
+    signinLink: {
+        fontSize: 16,
+        color: colors.blue,
         fontWeight: 'bold',
     },
 })
-

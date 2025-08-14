@@ -16,6 +16,9 @@ import SearchResultsScreen from './screen/SearchResultsScreen';
 import EditProfileScreen from './screen/EditProfileScreen';
 import ApplicationsScreen from './screen/ApplicationsScreen';
 import JobApplicationsScreen from './screen/JobApplicationsScreen';
+import SettingsScreen from './screen/SettingsScreen';
+import AppliedScreen from './screen/AppliedScreen';
+import Recruiterjobscreen from './screen/Recruiterjobscreen';
 
 
 // Import Tab Navigators
@@ -44,6 +47,9 @@ const App = () => {
         <Stack.Screen name="EditProfileScreen" component={EditProfileScreen} />
         <Stack.Screen name="ApplicationsScreen" component={ApplicationsScreen} />
         <Stack.Screen name="JobApplicationsScreen" component={JobApplicationsScreen} />
+        <Stack.Screen name="SettingsScreen" component={SettingsScreen}/>
+        <Stack.Screen name="AppliedScreen" component={AppliedScreen} />
+        <Stack.Screen name="Recruiterjobscreen" component={Recruiterjobscreen} />
       </Stack.Navigator>
     </NavigationContainer>
   )

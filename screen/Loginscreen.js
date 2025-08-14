@@ -59,17 +59,32 @@ const validateAndLogin = async () => {
         });
         if (response.status === 200 || response.status === 201)  {
             if (response.data.token) {
+                console.log('Login successful:', response.data.token);
+                console.log('User ID:', response.data);
                 await AsyncStorage.setItem('token', response.data.token);
-                // Fetch user info to get role
+                // Fetch user info to get role and store userId
                 const userRes = await axios.get(`${BACKEND_URL}/api/auth/me`, {
                     headers: { Authorization: `Bearer ${response.data.token}` }
                 });
+                if (userRes.data?._id) {
+                    await AsyncStorage.setItem('userId', userRes.data._id);
+                }
+                //optional alert
+                setTimeout(() => {
+               
+                }, 300);
+
+                console.log("userdata:",userRes.data);
+                
                 // Redirect based on role
-                if (userRes.data.roleId?.name === 'Recruiter') {
+                setTimeout(()=>{
+                    if (userRes.data.roleId?.name === 'Recruiter') {
                     navigation.reset({ index: 0, routes: [{ name: 'RecruiterTabs' }] });
                 } else {
                     navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
                 }
+                },500);
+                
             }
         } else {
             Alert.alert('Login Failed', response.data.message || 'Something went wrong.');
@@ -120,6 +135,18 @@ return (
                     Login
                 </Text>
             </TouchableOpacity>
+
+            {/* Don't have account? Sign up link */}
+            <View style={styles.signupContainer}>
+                <Text style={styles.signupText}>Don't have an account? </Text>
+                <TouchableOpacity 
+                    onPress={() => navigation?.navigate('Signup')}
+                    accessible={true}
+                    accessibilityLabel="Navigate to registration screen"
+                >
+                    <Text style={styles.signupLink}>Sign Up</Text>
+                </TouchableOpacity>
+            </View>
         </View>
     </View>
 )
@@ -166,5 +193,20 @@ const styles = StyleSheet.create({
         marginBottom: 8,
         paddingHorizontal: 12,
         backgroundColor: '#fafafa',
+    },
+    signupContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 20,
+    },
+    signupText: {
+        fontSize: 16,
+        color: '#666',
+    },
+    signupLink: {
+        fontSize: 16,
+        color: colors.blue,
+        fontWeight: 'bold',
     },
 })
