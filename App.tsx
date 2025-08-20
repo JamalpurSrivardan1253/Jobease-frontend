@@ -19,11 +19,13 @@ import JobApplicationsScreen from './screen/JobApplicationsScreen';
 import SettingsScreen from './screen/SettingsScreen';
 import AppliedScreen from './screen/AppliedScreen';
 import Recruiterjobscreen from './screen/Recruiterjobscreen';
+import AdminDashboard from './screen/AdminDashboard'; 
 
 
 // Import Tab Navigators
 import TabNavigator from './navigation/TabNavigator';
 import RecruiterTabNavigator from './navigation/RecruiterTabNavigator';
+import AdminTabNavigator from './navigation/AdminTabNavigation';
 
 
 const Stack = createNativeStackNavigator();
@@ -41,6 +43,7 @@ const App = () => {
         <Stack.Screen name="Signup" component={Registerscreen} />
         <Stack.Screen name="MainTabs" component={TabNavigator} />
         <Stack.Screen name="RecruiterTabs" component={RecruiterTabNavigator} />
+        <Stack.Screen name="AdminTabs" component={AdminTabNavigator} />
         <Stack.Screen name="Jobscreen" component={Jobscreen} />
         <Stack.Screen name="Companyscreen" component={Companyscreen} />
         <Stack.Screen name="SearchResults" component={SearchResultsScreen} />

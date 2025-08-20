@@ -17,58 +17,164 @@ const Registerscreen = () => {
     const [lastName, setLastName] = useState('')
     const [agreeTerms, setAgreeTerms] = useState(false)
     const [userType, setUserType] = useState('Seeker') // Seeker or Recruiter
+    // Step state for recruiter
+    const [step, setStep] = useState(1);
+    // Company fields for recruiter
+    const [companyName, setCompanyName] = useState('');
+    const [companyDescription, setCompanyDescription] = useState('');
+    const [companyWebsite, setCompanyWebsite] = useState('');
+    const [companyLocation, setCompanyLocation] = useState('');
 
+// const validateAndRegister = async () => {
+//     if (!firstName || !lastName || !email || !password || !confirmPassword) {
+//         Alert.alert('Missing Fields', 'Please fill all required fields.')
+//         return
+//     }
+//     if (password.length < 8) {
+//         Alert.alert('Weak Password', 'Password must be at least 8 characters long.');
+//         return;
+//     }
+
+//     if (password !== confirmPassword) {
+//         Alert.alert('Password Mismatch', 'Passwords do not match.')
+//         return
+//     }
+
+//     if (!agreeTerms) {
+//         Alert.alert('Terms Required', 'You must agree to the terms and conditions.')
+//         return
+//     }
+
+//     try {
+//         const response = await axios.post(`${BACKEND_URL}/api/auth/register`, {
+//             firstName,
+//             lastName,
+//             email,
+//             password,
+//             roleName: userType, // Make sure this matches backend key
+//         })
+//         console.log(response);
+
+//         if (response.status === 200 || response.status === 201) {
+//             navigation.replace('Login');
+//         } else {
+//             Alert.alert('Registration Failed', response.data.message || 'Something went wrong.')
+//         }
+//     } catch (error) {
+//         if (error.response) {
+//             // Server responded with a status other than 2xx
+//             console.log('Response error:', error.response.data)
+//             Alert.alert('Registration Failed', error.response.data.message || 'Invalid input.')
+//         } else if (error.request) {
+//             // Request was made but no response received
+//             console.log('Request error:', error.request)
+//             Alert.alert('Network Error', 'No response from server.')
+//         } else {
+//             // Something else happened
+//             console.log('Error:', error.message)
+//             Alert.alert('Error', 'An unexpected error occurred.')
+//         }
+//     }
+// }
 const validateAndRegister = async () => {
-    if (!firstName || !lastName || !email || !password || !confirmPassword) {
-        Alert.alert('Missing Fields', 'Please fill all required fields.')
-        return
-    }
-    if (password.length < 8) {
-        Alert.alert('Weak Password', 'Password must be at least 8 characters long.');
+    // Step 1 validation
+    if (userType === 'Recruiter' && step === 1) {
+        if (!firstName) {
+            Alert.alert('First Name Missing', 'Please enter your first name.');
+            return;
+        }
+        if (!lastName) {
+            Alert.alert('Last Name Missing', 'Please enter your last name.');
+            return;
+        }
+        if (!email) {
+            Alert.alert('Email Missing', 'Please enter your email address.');
+            return;
+        }
+        if (!password || !confirmPassword) {
+            Alert.alert('Missing Fields', 'Please fill all required fields.');
+            return;
+        }
+        if (password.length < 8) {
+            Alert.alert('Weak Password', 'Password must be at least 8 characters long.');
+            return;
+        }
+        if (password !== confirmPassword) {
+            Alert.alert('Password Mismatch', 'Passwords do not match.');
+            return;
+        }
+        if (!agreeTerms) {
+            Alert.alert('Terms Required', 'You must agree to the terms and conditions.');
+            return;
+        }
+        // Go to step 2 for recruiter
+        setStep(2);
         return;
     }
-
-    if (password !== confirmPassword) {
-        Alert.alert('Password Mismatch', 'Passwords do not match.')
-        return
-    }
-
-    if (!agreeTerms) {
-        Alert.alert('Terms Required', 'You must agree to the terms and conditions.')
-        return
-    }
-
-    try {
-        const response = await axios.post(`${BACKEND_URL}/api/auth/register`, {
-            firstName,
-            lastName,
-            email,
-            password,
-            roleName: userType, // Make sure this matches backend key
-        })
-        console.log(response);
-
-        if (response.status === 200 || response.status === 201) {
-            navigation.replace('Login');
-        } else {
-            Alert.alert('Registration Failed', response.data.message || 'Something went wrong.')
+    // Step 2 validation for recruiter
+    if (userType === 'Recruiter' && step === 2) {
+        if (!companyName) {
+            Alert.alert('Company Name Missing', 'Please enter your company name.');
+            return;
         }
-    } catch (error) {
-        if (error.response) {
-            // Server responded with a status other than 2xx
-            console.log('Response error:', error.response.data)
-            Alert.alert('Registration Failed', error.response.data.message || 'Invalid input.')
-        } else if (error.request) {
-            // Request was made but no response received
-            console.log('Request error:', error.request)
-            Alert.alert('Network Error', 'No response from server.')
-        } else {
-            // Something else happened
-            console.log('Error:', error.message)
-            Alert.alert('Error', 'An unexpected error occurred.')
+        // Add more company field validations if needed
+    }
+    // Seeker or recruiter step 2: register
+    if (userType === 'Seeker' || (userType === 'Recruiter' && step === 2)) {
+        try {
+            // Register user
+            const response = await axios.post(`${BACKEND_URL}/api/auth/register`, {
+                firstName,
+                lastName,
+                email,
+                password,
+                roleName: userType,
+            });
+            if (response.status === 200 || response.status === 201) {
+                if (userType === 'Recruiter') {
+                    // Try to create company profile for recruiter (without login)
+                    try {
+                        await axios.post(`${BACKEND_URL}/api/companies`, {
+                            name: companyName,
+                            description: companyDescription,
+                            website: companyWebsite,
+                            location: companyLocation,
+                            recruiterEmail: email, // Pass recruiter email for backend association
+                        });
+                        Alert.alert('Success', 'Account and company created! Please wait for admin approval before logging in.');
+                    } catch (companyErr) {
+                        Alert.alert('Partial Success', 'Account created, but company creation failed. Please contact admin or try after approval.');
+                    }
+                    navigation.replace('Login');
+                } else {
+                    Alert.alert('Success', 'Account created!');
+                    navigation.replace('Login');
+                }
+            } else {
+                Alert.alert('Registration Failed', response.data.message || 'Something went wrong.');
+            }
+        } catch (error) {
+            if (error.response) {
+                if (
+                    error.response.data &&
+                    (
+                        error.response.data.message?.toLowerCase().includes('email already exists') ||
+                        error.response.data.error?.toLowerCase().includes('email already exists') ||
+                        error.response.data.msg?.toLowerCase().includes('user already exists')
+                    )
+                ) {
+                    Alert.alert('Registration Failed', 'Email already exists. Please use a different email.');
+                } else {
+                    Alert.alert('Registration Failed', error.response.data.message || error.response.data.msg || 'Invalid input.');
+                }
+            } else if (error.request) {
+                Alert.alert('Network Error', 'No response from server.');
+            } else {
+                Alert.alert('Error', 'An unexpected error occurred.');
+            }
         }
     }
-}
+};
 
     return (
         <View style={styles.container}>
@@ -80,60 +186,84 @@ const validateAndRegister = async () => {
                         <TouchableOpacity
                             key={type}
                             style={[styles.toggleButton, userType === type && styles.activeToggle]}
-                            onPress={() => setUserType(type)}
+                            onPress={() => { setUserType(type); setStep(1); }}
                         >
                             <Text style={{ color: userType === type ? '#fff' : '#333', fontWeight: 'bold' }}>{type}</Text>
                         </TouchableOpacity>
                     ))}
                 </View>
 
-                <Text style={styles.label}>First Name</Text>
-                <TextInput style={styles.inputField} placeholder="Enter your first name" value={firstName} onChangeText={setFirstName} />
+                {/* Step 1: Personal info for all, step 2: company info for recruiter */}
+                {step === 1 && (
+                    <>
+                        <Text style={styles.label}>First Name</Text>
+                        <TextInput style={styles.inputField} placeholder="Enter your first name" value={firstName} onChangeText={setFirstName} />
 
-                <Text style={styles.label}>Last Name</Text>
-                <TextInput style={styles.inputField} placeholder="Enter your last name" value={lastName} onChangeText={setLastName} />
+                        <Text style={styles.label}>Last Name</Text>
+                        <TextInput style={styles.inputField} placeholder="Enter your last name" value={lastName} onChangeText={setLastName} />
 
-                <Text style={styles.label}>Email Address</Text>
-                <TextInput
-                    style={styles.inputField}
-                    placeholder="Enter your email"
-                    value={email}
-                    onChangeText={setEmail}
-                    autoCapitalize="none"
-                    keyboardType="email-address"
-                />
+                        <Text style={styles.label}>Email Address</Text>
+                        <TextInput
+                            style={styles.inputField}
+                            placeholder="Enter your email"
+                            value={email}
+                            onChangeText={setEmail}
+                            autoCapitalize="none"
+                            keyboardType="email-address"
+                        />
 
-                <Text style={styles.label}>Password</Text>
-                <TextInput
-                    style={styles.inputField}
-                    placeholder="Enter your password"
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry={true}
-                />
+                        <Text style={styles.label}>Password</Text>
+                        <TextInput
+                            style={styles.inputField}
+                            placeholder="Enter your password"
+                            value={password}
+                            onChangeText={setPassword}
+                            secureTextEntry={true}
+                        />
 
-                <Text style={styles.label}>Confirm Password</Text>
-                <TextInput
-                    style={styles.inputField}
-                    placeholder="Confirm your password"
-                    value={confirmPassword}
-                    onChangeText={setConfirmPassword}
-                    secureTextEntry={true}
-                />
+                        <Text style={styles.label}>Confirm Password</Text>
+                        <TextInput
+                            style={styles.inputField}
+                            placeholder="Confirm your password"
+                            value={confirmPassword}
+                            onChangeText={setConfirmPassword}
+                            secureTextEntry={true}
+                        />
 
-                <View style={styles.checkboxContainer}>
-                    <TouchableOpacity
-                        onPress={() => setAgreeTerms(!agreeTerms)}
-                        style={[styles.checkbox, agreeTerms && styles.checkboxChecked]}
-                    >
-                        {agreeTerms && <View style={styles.checkboxInner} />}
-                    </TouchableOpacity>
-                    <Text style={{ fontSize: 14, color: '#555' }}>I agree to the Terms and Conditions</Text>
-                </View>
+                        <View style={styles.checkboxContainer}>
+                            <TouchableOpacity
+                                onPress={() => setAgreeTerms(!agreeTerms)}
+                                style={[styles.checkbox, agreeTerms && styles.checkboxChecked]}
+                            >
+                                {agreeTerms && <View style={styles.checkboxInner} />}
+                            </TouchableOpacity>
+                            <Text style={{ fontSize: 14, color: '#555' }}>I agree to the Terms and Conditions</Text>
+                        </View>
 
-                <TouchableOpacity style={styles.registerButton} onPress={validateAndRegister}>
-                    <Text style={styles.registerButtonText}>Register</Text>
-                </TouchableOpacity>
+                        <TouchableOpacity style={styles.registerButton} onPress={validateAndRegister}>
+                            <Text style={styles.registerButtonText}>{userType === 'Recruiter' ? 'Next' : 'Register'}</Text>
+                        </TouchableOpacity>
+                    </>
+                )}
+
+                {step === 2 && userType === 'Recruiter' && (
+                    <>
+                        <Text style={styles.label}>Company Name</Text>
+                        <TextInput style={styles.inputField} placeholder="Enter company name" value={companyName} onChangeText={setCompanyName} />
+                        <Text style={styles.label}>Description</Text>
+                        <TextInput style={styles.inputField} placeholder="Enter company description" value={companyDescription} onChangeText={setCompanyDescription} />
+                        <Text style={styles.label}>Website</Text>
+                        <TextInput style={styles.inputField} placeholder="Enter company website" value={companyWebsite} onChangeText={setCompanyWebsite} />
+                        <Text style={styles.label}>Location</Text>
+                        <TextInput style={styles.inputField} placeholder="Enter company location" value={companyLocation} onChangeText={setCompanyLocation} />
+                        <TouchableOpacity style={styles.registerButton} onPress={validateAndRegister}>
+                            <Text style={styles.registerButtonText}>Register</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.registerButton, { backgroundColor: '#ccc', marginTop: 8 }]} onPress={() => setStep(1)}>
+                            <Text style={[styles.registerButtonText, { color: '#333' }]}>Back</Text>
+                        </TouchableOpacity>
+                    </>
+                )}
 
                 {/* Already have account? Sign in link */}
                 <View style={styles.signinContainer}>
@@ -147,7 +277,6 @@ const validateAndRegister = async () => {
     )
 }
 
-export default Registerscreen
 
 const styles = StyleSheet.create({
     container: {
@@ -256,3 +385,4 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
 })
+export default Registerscreen;

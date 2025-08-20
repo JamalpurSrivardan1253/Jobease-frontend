@@ -93,27 +93,6 @@ const Recurtierdashboard = ({ navigation }) => {
       </View>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 24 }}>
         <Text style={styles.sectionTitle}>Hiring Process</Text>
-        {/* {jobs.map((job) => (
-          <TouchableOpacity key={job._id || job.id} 
-          style={styles.jobCard}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2, justifyContent: 'space-between' }}>
-              <Text style={styles.jobTitle}>{job.title}</Text>
-              <View style={
-                job.status === 'approved' ? styles.approvedBadge :
-                job.status === 'Active' ? styles.activeBadge :
-                styles.inactiveBadge
-              }>
-                <Text style={
-                  job.status === 'approved' ? styles.approvedBadgeText :
-                  job.status === 'Active' ? styles.activeBadgeText :
-                  styles.inactiveBadgeText
-                }>{job.status === 'approved' ? 'Active' : (job.status || 'Pending')}</Text>
-              </View>
-            </View>
-            <Text style={styles.jobCompany}>{job.company?.name || job.company || ''}</Text>
-            <Text style={styles.jobLocation}>{job.location}</Text>
-           </TouchableOpacity>
-        ))} */}
         {jobs.map((job) => (
   <TouchableOpacity
     key={job._id || job.id}

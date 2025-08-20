@@ -302,45 +302,47 @@ const JobApplicationsScreen = ({ route }) => {
   );
 
   // Calculate statistics
-  const statusCounts = applicationsData.reduce((acc, app) => {
-    acc[app.status] = (acc[app.status] || 0) + 1;
-    return acc;
-  }, {});
+  const statusCounts = Array.isArray(applicationsData)
+    ? applicationsData.reduce((acc, app) => {
+        acc[app.status] = (acc[app.status] || 0) + 1;
+        return acc;
+      }, {})
+    : {};
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-      
+
       <View style={styles.headerSection}>
         <Text style={styles.header}>{job?.title || 'Job'} Applications</Text>
-        
+
         <View style={styles.statsContainer}>
           <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{applicationsData.length}</Text>
+            <Text style={styles.statNumber}>{Array.isArray(applicationsData) ? applicationsData.length : 0}</Text>
             <Text style={styles.statLabel}>Total</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={[styles.statNumber, { color: '#10B981' }]}>
+            <Text style={[styles.statNumber, { color: '#10B981' }]}> 
               {statusCounts.shortlisted || 0}
             </Text>
             <Text style={styles.statLabel}>Shortlisted</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={[styles.statNumber, { color: '#F59E0B' }]}>
+            <Text style={[styles.statNumber, { color: '#F59E0B' }]}> 
               {statusCounts.interview || 0}
             </Text>
             <Text style={styles.statLabel}>Interview</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={[styles.statNumber, { color: '#EF4444' }]}>
+            <Text style={[styles.statNumber, { color: '#EF4444' }]}> 
               {statusCounts.rejected || 0}
             </Text>
             <Text style={styles.statLabel}>Rejected</Text>
           </View>
         </View>
       </View>
-      
-      {applicationsData.length === 0 ? (
+
+      {Array.isArray(applicationsData) && applicationsData.length === 0 ? (
         <View style={styles.emptyState}>
           <Ionicons name="document-text-outline" size={64} color="#94A3B8" style={styles.emptyStateIcon} />
           <Text style={styles.emptyStateTitle}>No Applications Yet</Text>
@@ -349,15 +351,17 @@ const JobApplicationsScreen = ({ route }) => {
           </Text>
         </View>
       ) : (
-        <FlatList
-          data={applicationsData}
-          keyExtractor={(item) => item._id || String(Math.random())}
-          renderItem={renderApplicationCard}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.listContainer}
-        />
+        Array.isArray(applicationsData) && (
+          <FlatList
+            data={applicationsData}
+            keyExtractor={(item) => item._id || String(Math.random())}
+            renderItem={renderApplicationCard}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.listContainer}
+          />
+        )
       )}
-      
+
       <StatusModal />
     </View>
   );

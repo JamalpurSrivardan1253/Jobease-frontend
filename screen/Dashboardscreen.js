@@ -169,7 +169,7 @@ const Dashboardscreen = () => {
 					{isSearching && <ActivityIndicator size="small" color={colors.blue} />}
 				</View>
 
-				{jobs.length > 0 ? (
+				{/* {jobs.length > 0 ? (
 					jobs.map((job, idx) => (
 						<TouchableOpacity
 							key={job._id || job.id || idx}
@@ -203,7 +203,44 @@ const Dashboardscreen = () => {
 							</Text>
 						)}
 					</View>
-				)}
+				)} */}
+				{jobs.filter(job => (job.status || '').toLowerCase() === 'approved').length > 0 ? (
+    jobs
+        .filter(job => (job.status || '').toLowerCase() === 'approved')
+        .map((job, idx) => (
+            <TouchableOpacity
+                key={job._id || job.id || idx}
+                style={styles.jobCard}
+                onPress={() => {
+                    navigation.navigate('Jobscreen', { jobId: job._id || job.id });
+                }}
+            >
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
+                    <Text style={styles.jobTitle}>{job.title}</Text>
+                    {job.isNew && (
+                        <View style={styles.newBadge}>
+                            <Text style={styles.newBadgeText}>New</Text>
+                        </View>
+                    )}
+                </View>
+                <Text style={styles.jobCompany}>
+                    {job.company?.name || job.company || ''}
+                </Text>
+                <Text style={styles.jobLocation}>{job.location}</Text>
+            </TouchableOpacity>
+        ))
+) : (
+    <View style={styles.noResults}>
+        <Text style={styles.noResultsText}>
+            {searchQuery ? 'No jobs found matching your search.' : 'No jobs available.'}
+        </Text>
+        {searchQuery && (
+            <Text style={styles.noResultsSubText}>
+                Try different keywords or clear search
+            </Text>
+        )}
+    </View>
+)}
 			</ScrollView>
 		</View>
 	);

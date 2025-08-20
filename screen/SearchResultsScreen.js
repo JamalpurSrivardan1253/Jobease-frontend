@@ -180,54 +180,6 @@ const SearchResultsScreen = ({ route }) => {
           </TouchableOpacity>
         </View>
 
-        {/* Filter UI */}
-        {/* <Animated.View
-          style={[
-            styles.filterContainer,
-            {
-              height: filterAnimation.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0, 220],
-              }),
-              opacity: filterAnimation,
-            },
-          ]}
-        >
-          <ScrollView contentContainerStyle={styles.filterInputGroup}>
-            <TextInput
-              style={styles.filterInput}
-              placeholder="Location"
-              value={filterLocation}
-              onChangeText={setFilterLocation}
-            />
-            <TextInput
-              style={styles.filterInput}
-              placeholder="Category"
-              value={filterCategory}
-              onChangeText={setFilterCategory}
-            />
-            <TextInput
-              style={styles.filterInput}
-              placeholder="Min Salary"
-              value={filterMinSalary}
-              onChangeText={setFilterMinSalary}
-              keyboardType="numeric"
-            />
-            <TextInput
-              style={styles.filterInput}
-              placeholder="Max Salary"
-              value={filterMaxSalary}
-              onChangeText={setFilterMaxSalary}
-              keyboardType="numeric"
-            />
-            <TouchableOpacity style={styles.applyButton} onPress={applyFilters}>
-              <Text style={styles.applyButtonText}>Apply Filters</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.clearButton} onPress={clearFilters}>
-              <Text style={styles.clearText}>Clear Filters</Text>
-            </TouchableOpacity>
-          </ScrollView>
-        </Animated.View> */}
         <Modal
   animationType="slide"
   transparent={true}
@@ -281,14 +233,14 @@ const SearchResultsScreen = ({ route }) => {
       </View>
 
       {/* Job Results */}
-      <FlatList
-        data={jobs}
-        renderItem={renderJobCard}
-        keyExtractor={(item) => item._id}
-        contentContainerStyle={{ paddingVertical: 12 }}
-        ListEmptyComponent={renderEmptyState}
-        ListFooterComponent={isLoading && <ActivityIndicator size="large" color={colors.blue} />}
-      />
+     <FlatList
+  data={jobs.filter(job => (job.status || '').toLowerCase() === 'approved')}
+  renderItem={renderJobCard}
+  keyExtractor={(item) => item._id}
+  contentContainerStyle={{ paddingVertical: 12 }}
+  ListEmptyComponent={renderEmptyState}
+  ListFooterComponent={isLoading && <ActivityIndicator size="large" color={colors.blue} />}
+/>
     </View>
   );
 };

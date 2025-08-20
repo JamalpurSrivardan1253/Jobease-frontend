@@ -24,7 +24,11 @@ useEffect(() => {
                 // Redirect based on role
                 if (userRes.data.roleId?.name === 'Recruiter') {
                     navigation.reset({ index: 0, routes: [{ name: 'RecruiterTabs' }] });
-                } else {
+                } 
+                else if (userRes.data.roleId?.name === 'Admin') {
+                    navigation.reset({ index: 0, routes: [{ name: 'AdminTabs' }] });
+                }
+                else {
                     navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
                 }
                 return;
@@ -77,13 +81,15 @@ const validateAndLogin = async () => {
                 console.log("userdata:",userRes.data);
                 
                 // Redirect based on role
-                setTimeout(()=>{
-                    if (userRes.data.roleId?.name === 'Recruiter') {
-                    navigation.reset({ index: 0, routes: [{ name: 'RecruiterTabs' }] });
-                } else {
-                    navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
-                }
-                },500);
+               setTimeout(() => {
+    if (userRes.data.roleId?.name === 'Recruiter') {
+        navigation.reset({ index: 0, routes: [{ name: 'RecruiterTabs' }] });
+    } else if (userRes.data.roleId?.name === 'Admin') {
+        navigation.reset({ index: 0, routes: [{ name: 'AdminTabs' }] });
+    } else {
+        navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
+    }
+}, 500);
                 
             }
         } else {
